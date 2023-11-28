@@ -10,3 +10,4 @@
 /python3-dddb.deb
 /python3-dddb/usr/lib/python3/dist-packages/dddb/*
 !/python3-dddb/usr/lib/python3/dist-packages/dddb/__init__.py
+/.direnv
