@@ -1,0 +1,6 @@
+Package: python3-dddb
+Version: 0.1
+Maintainer: Keaton Clark
+Architecture: amd64
+Description: DeadDrop Drop Box
+Dependencies: python3, libopencv-dev
