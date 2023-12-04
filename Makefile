@@ -5,8 +5,8 @@ debian: debian-rm
 	docker exec dddb_c cargo build
 	docker exec dddb_c cp /dddb/target/debug/libdddb.so /dddb/python3-dddb/usr/lib/python3/dist-packages/dddb/dddb.so
 	docker exec dddb_c dpkg-deb --build /dddb/python3-dddb
-	docker exec dddb_c dpkg -i /dddb/python3-dddb.deb
-	docker exec -it dddb_c python3
+	docker exec dddb_c apt-get -y install /dddb/python3-dddb.deb
+	docker exec -it dddb_c bash
 	docker cp dddb_c:/dddb/python3-dddb.deb ./
 debian-rm:
 	-docker stop dddb_c
