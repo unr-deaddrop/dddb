@@ -3,7 +3,7 @@
 
 let
 	python-packages = ps: with ps; [
-		pandas
+		yt-dlp
 	];
 in
 pkgs.mkShell {
