@@ -60,14 +60,14 @@ def upload(Path: str):
                            default="")
     argparser.add_argument("--privacyStatus", choices=VALID_PRIVACY_STATUSES,
                            default=VALID_PRIVACY_STATUSES[0], help="Video privacy status.")
-    args = argparser.parse_args(["--file", Path, "--noauth_local_webserver"])
+    args = argparser.parse_args(["--file", Path, "--noauth_local_webserver", "--privacyStatus", "unlisted"])
 
     if not os.path.exists(args.file):
         exit("Please specify a valid file using the --file= parameter.")
 
     youtube = get_authenticated_service(args)
     try:
-        initialize_upload(youtube, args)
+        return 'https://www.youtube.com/watch?v={}'.format(initialize_upload(youtube, args)['id'])
     except HttpError as e:
         print("An HTTP error %d occurred:\n%s" % (e.resp.status, e.content))
     pass
@@ -121,7 +121,7 @@ def initialize_upload(youtube, options):
         media_body=MediaFileUpload(options.file, chunksize=-1, resumable=True)
     )
 
-    resumable_upload(insert_request)
+    return resumable_upload(insert_request)
 
 # This method implements an exponential backoff strategy to resume a
 # failed upload.
@@ -158,3 +158,4 @@ def resumable_upload(insert_request):
             sleep_seconds = random.random() * max_sleep
             print("Sleeping %f seconds and then retrying..." % sleep_seconds)
             time.sleep(sleep_seconds)
+    return response
