@@ -1,8 +1,0 @@
-services:
-  dev:
-    build: ./.
-    stdin_open: true
-    tty: true
-    entrypoint: /bin/bash
-    volumes:
-      - ${PWD}:/project
