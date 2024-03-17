@@ -30,10 +30,10 @@ class dddbCraigslist():
         if (self.driver.current_url != "https://accounts.craigslist.org/login/home"):
             WebDriverWait(self.driver, 5).until(
                     expected_conditions.presence_of_element_located((By.ID, "inputEmailHandle"))
-            ).send_keys("unrdeaddrop@gmail.com")
+            ).send_keys(self.email)
             WebDriverWait(self.driver, 5).until(
                     expected_conditions.presence_of_element_located((By.ID, "inputPassword"))
-            ).send_keys("7g2Eu+up*$]ww8L")
+            ).send_keys(self.password)
             WebDriverWait(self.driver, 5).until(
                     expected_conditions.presence_of_element_located((By.ID, "login"))
             ).click()
