@@ -1,6 +1,0 @@
-Package: python3-dddb
-Version: 0.1
-Maintainer: Keaton Clark
-Architecture: amd64
-Description: DeadDrop Drop Box
-Depends: python3, libopencv-dev, yt-dlp, python3-googleapi, python3-google-auth-httplib2, python3-google-auth-oauthlib

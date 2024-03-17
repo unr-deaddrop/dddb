@@ -1,30 +1,27 @@
-# save this as shell.nix
-{ pkgs ? import <nixpkgs> {}}:
-
+{ pkgs ? import <nixpkgs> {} }:
 let
-	python-packages = ps: with ps; [
-		yt-dlp
-	];
-in
-pkgs.mkShell {
-	packages = with pkgs; [ 
-		(python311.withPackages python-packages)
-		rust-analyzer
-		cargo
-		rustup
-		clang
-		pkgconfig
-		openssl.dev
-		opencv
-		ffmpeg
-		vlc
-	];
-	RUSTC_VERSION = "stable";
-	shellHook = ''
-		export PATH=$PATH:''${CARGO_HOME:-~/.cargo}/bin
-		export PATH=$PATH:''${RUSTUP_HOME:-~/.rustup}/toolchains/$RUSTC_VERSION-x86_64-unknown-linux-gnu/bin/
-	'';
-	LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib";
-	RUST_BACKTRACE=1;
-}
-
+  myAppEnv = pkgs.poetry2nix.mkPoetryEnv {
+    projectDir = ./.;
+  overrides = pkgs.poetry2nix.defaultPoetryOverrides.extend
+    (self: super: {
+      meson = super.meson.overridePythonAttrs
+      (
+        old: {
+          buildInputs = (old.buildInputs or [ ]) ++ [ super.flit-core ];
+        }
+      );
+      lazy-loader = super.lazy-loader.overridePythonAttrs
+      (
+        old: {
+          buildInputs = (old.buildInputs or [ ]) ++ [ super.flit-core ];
+        }
+      );
+      urllib3 = super.urllib3.overridePythonAttrs
+      (
+        old: {
+          buildInputs = (old.buildInputs or [ ]) ++ [ super.hatchling ];
+        }
+      );
+    });
+  };
+in myAppEnv.env

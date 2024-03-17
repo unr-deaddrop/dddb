@@ -4,6 +4,7 @@ import os
 import random
 import sys
 import time
+import tempfile
 
 from apiclient.discovery import build
 from apiclient.errors import HttpError
@@ -11,6 +12,7 @@ from apiclient.http import MediaFileUpload
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.file import Storage
 from oauth2client.tools import argparser, run_flow
+from dddb.video import dddbDecodeVideo, dddbEncodeVideo
 
 httplib2.RETRIES = 1
 MAX_RETRIES = 10
@@ -23,22 +25,6 @@ YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 
 VALID_PRIVACY_STATUSES = ("public", "private", "unlisted")
-
-MISSING_CLIENT_SECRETS_MESSAGE = """
-WARNING: Please configure OAuth 2.0
-
-To make this sample run you will need to populate the client_secrets.json file
-found at:
-
-   %s
-
-with information from the API Console
-https://console.cloud.google.com/
-
-For more information about the client_secrets.json file format, please visit:
-https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
-""" % os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                   CLIENT_SECRETS_FILE))
 
 def download(URL: str, Path: str):
     dl_opts = {
