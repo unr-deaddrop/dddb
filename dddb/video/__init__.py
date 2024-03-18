@@ -91,12 +91,15 @@ class TestDddbVideo(unittest.TestCase):
     def test_encode(self):
 
         dddbVideoEncodeObj = dddbEncodeVideo(b"echo 'hello'")
+        print("Successfully encoded video")
+
     def test_decode(self):
         with open(os.path.dirname(os.path.realpath(__file__))+"/bee-movie.txt","rb") as f:
             string = f.read()
         dddbVideoEncodeObj = dddbEncodeVideo(string)
         dddbVideoDecodeObj = dddbDecodeVideo(dddbVideoEncodeObj.getBytes())
         assert dddbVideoDecodeObj.getBytes() == string
+        print("Successfully encode and decoded video")
         print(str(dddbVideoDecodeObj.getBPS())+" Bytes/Second decode")
         print(str(dddbVideoEncodeObj.getBPS())+" Bytes/Second encode")
 
