@@ -4,7 +4,9 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver import FirefoxOptions
 from timeit import default_timer as timer
+from typing import Union
 from math import ceil
 import time
 import os
@@ -12,10 +14,13 @@ import random
 import unittest
 from collections import defaultdict
 class dddbCraigslist():
-    def __init__(self, email:str, password:str):
+    def __init__(self, email:str, password:str, options: Union[FirefoxOptions, None]):
+        if options is None:
+            options = FirefoxOptions()
+        
         self.email = email
         self.password = password
-        self.driver = webdriver.Firefox()
+        self.driver = webdriver.Firefox(options=options)
         self.zip = "89436"
         self.last_time = time.time()
         self.message_size = 29998
