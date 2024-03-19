@@ -14,7 +14,7 @@ import random
 import unittest
 from collections import defaultdict
 class dddbCraigslist():
-    def __init__(self, email:str, password:str, options: Union[FirefoxOptions, None]):
+    def __init__(self, email:str, password:str, options: Union[FirefoxOptions, None] = None):
         if options is None:
             options = FirefoxOptions()
         
