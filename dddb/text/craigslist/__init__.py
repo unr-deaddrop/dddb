@@ -4,18 +4,27 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver import FirefoxOptions
 from timeit import default_timer as timer
+from typing import Union
 from math import ceil
+import logging
 import time
 import os
 import random
 import unittest
 from collections import defaultdict
+
+logger = logging.getLogger(__name__)
+
 class dddbCraigslist():
-    def __init__(self, email:str, password:str):
+    def __init__(self, email:str, password:str, options: Union[FirefoxOptions, None] = None):
+        if options is None:
+            options = FirefoxOptions()
+        
         self.email = email
         self.password = password
-        self.driver = webdriver.Firefox()
+        self.driver = webdriver.Firefox(options=options)
         self.zip = "89436"
         self.last_time = time.time()
         self.message_size = 29998
@@ -94,6 +103,7 @@ class dddbCraigslist():
         for el in els:
             label = el.text.split("-")
             if label[0] == '[No Title]' or float(label[0]) >= self.last_time:
+                logger.debug(f"Ignoring {label} ({self.last_time=})")
                 continue
             label = [float(label[0]), [int(i) for i in label[1].split("/")]]
             if label[0] not in table:
