@@ -70,6 +70,18 @@ class dddbCraigslist():
         WebDriverWait(self.driver, 5).until(
                 expected_conditions.presence_of_element_located((By.ID, "post"))
         ).click()
+        # If the account has *ever* published a listing, Craigslist may ask the user
+        # if they want to reuse the same data as before. This sets it to not
+        # reuse the post information.
+        try:
+            WebDriverWait(self.driver, 2).until(
+                    expected_conditions.presence_of_element_located((By.NAME, "brand_new_post"))
+            ).click()
+            WebDriverWait(self.driver, 2).until(
+                    expected_conditions.presence_of_element_located((By.NAME, "go"))
+            ).click()
+        except TimeoutException:
+            pass
         WebDriverWait(self.driver, 5).until(
                 expected_conditions.presence_of_element_located((By.XPATH, "(//span[@class='right-side'])[6]"))
         ).click()
