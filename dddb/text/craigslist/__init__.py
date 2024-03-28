@@ -97,7 +97,7 @@ class dddbCraigslist():
         el = WebDriverWait(self.driver, 5).until(
                 expected_conditions.presence_of_element_located((By.ID, "PostingBody"))
         )
-        self.driver.execute_script("arguments[0].value='"+data+"';", el);
+        self.driver.execute_script("arguments[0].value='"+data+"';", el)
         WebDriverWait(self.driver, 5).until(
                 expected_conditions.presence_of_element_located((By.NAME, "go"))
         ).click()
@@ -109,7 +109,7 @@ class dddbCraigslist():
         # we are most likely on the location selection page and not the "finish 
         # draft" page.
         try:
-            WebDriverWait(self.driver, 5).until(
+            WebDriverWait(self.driver, 2).until(
                     expected_conditions.presence_of_element_located((By.CLASS_NAME, "continue"))
             ).click()
             logger.info("Clicked through phone number warning")
@@ -161,7 +161,10 @@ class TestDddbCraigslist(unittest.TestCase):
     def test_cl(self):
         with open(os.path.dirname(os.path.realpath(__file__))+"/bee-movie.txt","rb") as f:
             string = f.read()
-        cl = dddbCraigslist(email="unrdeaddrop@gmail.com", password="")
+        
+        options = FirefoxOptions()    
+        # options.add_argument("--headless")
+        cl = dddbCraigslist(email="unrdeaddroptest@gmail.com", password="", options=options)
         cl.login()
         start=timer()
         cl.post(string)
