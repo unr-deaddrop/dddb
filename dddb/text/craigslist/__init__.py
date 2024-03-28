@@ -5,6 +5,7 @@ from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver import FirefoxOptions
+from selenium.common.exceptions import TimeoutException
 from timeit import default_timer as timer
 from typing import Union
 from math import ceil
@@ -91,6 +92,17 @@ class dddbCraigslist():
         WebDriverWait(self.driver, 5).until(
                 expected_conditions.presence_of_element_located((By.CLASS_NAME, "continue"))
         ).click()
+        # Craigslist will occasionally warn that a phone number is present in 
+        # arbitrary hex data. If a "continue" button is present on the third page,
+        # we are most likely on the location selection page and not the "finish 
+        # draft" page.
+        try:
+            WebDriverWait(self.driver, 5).until(
+                    expected_conditions.presence_of_element_located((By.CLASS_NAME, "continue"))
+            ).click()
+            logger.info("Clicked through phone number warning")
+        except TimeoutException:
+            pass
         WebDriverWait(self.driver, 5).until(
                 expected_conditions.presence_of_element_located((By.CLASS_NAME, "done"))
         ).click()
