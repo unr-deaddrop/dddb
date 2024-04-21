@@ -72,11 +72,9 @@ class dddbPeerTube:
                                 video = api_instance.videos_id_get(video_data['id']).to_dict()
                                 url = video['files'][0]['file_download_url'].replace("http://localhost:9000", self.host)
                                 ret.append(meta)
-                                ret[-1]['file'] = tempfile.NamedTemporaryFile(suffix=".avi", mode="w+b")
                                 filedownload = requests.get(url)
-                                with open(ret[-1]['file'].name, "w+b") as f:
-                                    f.write(filedownload.content)
-                                try: 
+                                ret[-1]['data'] = filedownload.content
+                                try:
                                     api_instance.videos_id_delete(video_data['id'])
                                 except peertube.ApiException as e:
                                     print("failed to delete video from peertube")
@@ -108,9 +106,8 @@ class TestDddbPeerTube(unittest.TestCase):
         dddbVideoEncodeObj = dddb.video.dddbEncodeVideo(string)
         assert dddbPeerTubeObj.post(dddbVideoEncodeObj.getBytes(), dest="test2", src="test1")
         response = dddbPeerTubeObj.get(dest="test2")
-        with open(response[0]['file'].name, "rb") as f:
-            dddbVideoDecodeObj = dddb.video.dddbDecodeVideo(f.read())
-            assert dddbVideoDecodeObj.getBytes() == string
+        dddbVideoDecodeObj = dddb.video.dddbDecodeVideo(response[0]['data'])
+        assert dddbVideoDecodeObj.getBytes() == string
 
 if __name__ == "__main__":
     unittest.main()
