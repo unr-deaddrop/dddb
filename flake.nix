@@ -49,6 +49,12 @@
             buildInputs = (old.buildInputs or [ ]) ++ [ super.hatchling ];
           }
         );
+        peertube = super.peertube.overridePythonAttrs
+        (
+          old: {
+            buildInputs = (old.buildInputs or [ ]) ++ [ super.setuptools super.hatchling super.hatch-fancy-pypi-readme super.hatch-vcs ];
+          }
+        );
         attrs = super.attrs.overridePythonAttrs
         (
           old: {
