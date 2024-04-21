@@ -683,6 +683,16 @@ files = [
 six = ">=1.5"
 
 [[package]]
+name = "pythonvideoconverter"
+version = "1.0.3"
+description = "Video Converter library"
+optional = false
+python-versions = "*"
+files = [
+    {file = "PythonVideoConverter-1.0.3.tar.gz", hash = "sha256:d725feb77d7e42cbdd90bf3800111c1b98a32bb1b3e51283eead0f82b2320c59"},
+]
+
+[[package]]
 name = "requests"
 version = "2.31.0"
 description = "Python HTTP for Humans."
@@ -940,4 +950,4 @@ websockets = ">=12.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "f17b330866b8546d44525512fc19171cbd69e8a3d3555ba3b62275b333dbb2ac"
+content-hash = "7844f908e0da443ed21f6500b248e75a26d8853600683d6574b8c5ee2da1a847"

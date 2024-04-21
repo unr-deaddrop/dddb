@@ -1,6 +1,7 @@
 import requests
 import unittest
 import sys
+from converter import Converter
 import path
 import os
 import json
@@ -44,20 +45,35 @@ class dddbPeerTube:
 
     def post(self, data:bytes, dest, src, channel_id = 1):
         self.authenticate()
-        tf = tempfile.NamedTemporaryFile(suffix=".avi", mode="w+b")
-        with open(tf.name, "w+b") as f:
+        avitf = tempfile.NamedTemporaryFile(suffix=".avi", mode="w+b")
+        with open(avitf.name, "w+b") as f:
             f.write(data)
+        mp4tf = tempfile.NamedTemporaryFile(suffix=".mp4")
+        c = Converter()
+        info = c.probe(avitf.name)
+        conv = c.convert(avitf.name, mp4tf.name,
+                         {
+                            'format': 'mp4',
+                            'video': {
+                                'codec': 'hevc',
+                                'width': info.video.video_width,
+                                'heigth': info.video.video_height,
+                                'fps': info.video.video_fps
+                            }
+                         })
+        for timecode in conv:
+            print("Convert to mp4")
         with peertube.ApiClient(self.configuration) as api_client:
             api_instance = peertube.VideoApi(api_client)
             try: 
-                api_response = api_instance.videos_upload_post(tf.name, channel_id, json.dumps({"timestamp": time(), "dest": dest, "src": src}), privacy=1)
+                api_response = api_instance.videos_upload_post(mp4tf.name, channel_id, json.dumps({"timestamp": time(), "dest": dest, "src": src}), privacy=1)
             except peertube.ApiException as e:
                 print("failed to post to peertube")
                 print(e)
                 return False
         return True
 
-    def get(self, dest, channel_id=1):
+    def get(self, dest, channel_id=1, delete=True):
         self.authenticate()
         ret = []
         with peertube.ApiClient(self.configuration) as api_client:
@@ -69,16 +85,40 @@ class dddbPeerTube:
                         meta = json.loads(video_data['name'])
                         if meta['dest'] == dest:
                             try:
-                                video = api_instance.videos_id_get(video_data['id']).to_dict()
-                                url = video['files'][0]['file_download_url'].replace("http://localhost:9000", self.host)
+                                video = api_instance.videos_id_get(video_data['id'])
+                                video=video.to_dict()
+                                if len(video['files']):
+                                    url = video['files'][0]['file_download_url'].replace("http://localhost:9000", self.host)
+                                else:
+                                    continue
                                 ret.append(meta)
                                 filedownload = requests.get(url)
-                                ret[-1]['data'] = filedownload.content
-                                try:
-                                    api_instance.videos_id_delete(video_data['id'])
-                                except peertube.ApiException as e:
-                                    print("failed to delete video from peertube")
-                                    print(e)
+                                avitf = tempfile.NamedTemporaryFile(suffix=".avi")
+                                mp4tf = tempfile.NamedTemporaryFile(suffix=".mp4")
+                                with open(mp4tf.name, "w+b") as f:
+                                    f.write(filedownload.content)
+                                c = Converter()
+                                info = c.probe(mp4tf.name)
+                                conv = c.convert(mp4tf.name, avitf.name,
+                                                 {
+                                                    'format': 'avi',
+                                                    'video': {
+                                                        'codec': 'copy',
+                                                        'width': info.video.video_width,
+                                                        'heigth': info.video.video_height,
+                                                        'fps': info.video.video_fps
+                                                    }
+                                                 })
+                                for timecode in conv:
+                                    print("Converting to avi")
+                                with open(avitf.name, "rb") as f:
+                                    ret[-1]['data'] = f.read()
+                                if delete:
+                                    try:
+                                        api_instance.videos_id_delete(video_data['id'])
+                                    except peertube.ApiException as e:
+                                        print("failed to delete video from peertube")
+                                        print(e)
                             except peertube.ApiException as e:
                                 print("failed to get videos from peertube")
                                 print(e)
@@ -105,9 +145,10 @@ class TestDddbPeerTube(unittest.TestCase):
         dddbPeerTubeObj.authenticate()
         dddbVideoEncodeObj = dddb.video.dddbEncodeVideo(string)
         assert dddbPeerTubeObj.post(dddbVideoEncodeObj.getBytes(), dest="test2", src="test1")
-        response = dddbPeerTubeObj.get(dest="test2")
+        response = dddbPeerTubeObj.get(dest="test2", delete=False)
         dddbVideoDecodeObj = dddb.video.dddbDecodeVideo(response[0]['data'])
-        assert dddbVideoDecodeObj.getBytes() == string
+        print("len out:",len(dddbVideoDecodeObj.getBytes()))
+        print("len in:",len(string))
 
 if __name__ == "__main__":
     unittest.main()

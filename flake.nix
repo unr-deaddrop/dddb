@@ -61,6 +61,12 @@
             buildInputs = (old.buildInputs or [ ]) ++ [ super.hatchling super.hatch-fancy-pypi-readme super.hatch-vcs ];
           }
         );
+        pythonvideoconverter = super.pythonvideoconverter.overridePythonAttrs
+        (
+          old: {
+            buildInputs = (old.buildInputs or [ ]) ++ [ super.setuptools ];
+          }
+        );
       });
     };
   in {
