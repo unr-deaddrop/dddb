@@ -4,18 +4,28 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver import FirefoxOptions
+from selenium.common.exceptions import TimeoutException
 from timeit import default_timer as timer
+from typing import Union
 from math import ceil
+import logging
 import time
 import os
 import random
 import unittest
 from collections import defaultdict
+
+logger = logging.getLogger(__name__)
+
 class dddbCraigslist():
-    def __init__(self, email:str, password:str):
+    def __init__(self, email:str, password:str, options: Union[FirefoxOptions, None] = None):
+        if options is None:
+            options = FirefoxOptions()
+        
         self.email = email
         self.password = password
-        self.driver = webdriver.Firefox()
+        self.driver = webdriver.Firefox(options=options)
         self.zip = "89436"
         self.last_time = time.time()
         self.message_size = 29998
@@ -60,6 +70,18 @@ class dddbCraigslist():
         WebDriverWait(self.driver, 5).until(
                 expected_conditions.presence_of_element_located((By.ID, "post"))
         ).click()
+        # If the account has *ever* published a listing, Craigslist may ask the user
+        # if they want to reuse the same data as before. This sets it to not
+        # reuse the post information.
+        try:
+            WebDriverWait(self.driver, 2).until(
+                    expected_conditions.presence_of_element_located((By.NAME, "brand_new_post"))
+            ).click()
+            WebDriverWait(self.driver, 2).until(
+                    expected_conditions.presence_of_element_located((By.NAME, "go"))
+            ).click()
+        except TimeoutException:
+            pass
         WebDriverWait(self.driver, 5).until(
                 expected_conditions.presence_of_element_located((By.XPATH, "(//span[@class='right-side'])[6]"))
         ).click()
@@ -75,13 +97,24 @@ class dddbCraigslist():
         el = WebDriverWait(self.driver, 5).until(
                 expected_conditions.presence_of_element_located((By.ID, "PostingBody"))
         )
-        self.driver.execute_script("arguments[0].value='"+data+"';", el);
+        self.driver.execute_script("arguments[0].value='"+data+"';", el)
         WebDriverWait(self.driver, 5).until(
                 expected_conditions.presence_of_element_located((By.NAME, "go"))
         ).click()
         WebDriverWait(self.driver, 5).until(
                 expected_conditions.presence_of_element_located((By.CLASS_NAME, "continue"))
         ).click()
+        # Craigslist will occasionally warn that a phone number is present in 
+        # arbitrary hex data. If a "continue" button is present on the third page,
+        # we are most likely on the location selection page and not the "finish 
+        # draft" page.
+        try:
+            WebDriverWait(self.driver, 2).until(
+                    expected_conditions.presence_of_element_located((By.CLASS_NAME, "continue"))
+            ).click()
+            logger.info("Clicked through phone number warning")
+        except TimeoutException:
+            pass
         WebDriverWait(self.driver, 5).until(
                 expected_conditions.presence_of_element_located((By.CLASS_NAME, "done"))
         ).click()
@@ -94,6 +127,7 @@ class dddbCraigslist():
         for el in els:
             label = el.text.split("-")
             if label[0] == '[No Title]' or float(label[0]) >= self.last_time:
+                logger.debug(f"Ignoring {label} ({self.last_time=})")
                 continue
             label = [float(label[0]), [int(i) for i in label[1].split("/")]]
             if label[0] not in table:
@@ -127,7 +161,10 @@ class TestDddbCraigslist(unittest.TestCase):
     def test_cl(self):
         with open(os.path.dirname(os.path.realpath(__file__))+"/bee-movie.txt","rb") as f:
             string = f.read()
-        cl = dddbCraigslist(email="unrdeaddrop@gmail.com", password="")
+        
+        options = FirefoxOptions()    
+        # options.add_argument("--headless")
+        cl = dddbCraigslist(email="unrdeaddroptest@gmail.com", password="", options=options)
         cl.login()
         start=timer()
         cl.post(string)
