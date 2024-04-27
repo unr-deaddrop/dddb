@@ -7,10 +7,11 @@ import cv2
 import tempfile
 
 class dddbEncodeVideo:
-    def __init__(self, data:bytes, px=1920, py=1080, n=5):
+    def __init__(self, data:bytes, px=1920, py=1280, n=10):
         assert isinstance(data, bytes)
         start=timer()
-        self.tempfile = tempfile.NamedTemporaryFile(suffix=".avi", mode="w+b")
+        self.tempfile = tempfile.NamedTemporaryFile(suffix=".mp4", mode="w+b", delete=False)
+        self.tempfile.close()
         self.data = data + b'\x01';
         by=int(py/n)
         bx=int(px/n)
@@ -29,36 +30,34 @@ class dddbEncodeVideo:
         data.resize(by*bx*fct)
         data = data.reshape(fct,by,bx,1)
         data = data.repeat(n, axis=1).repeat(n, axis=2).repeat(3, axis=3)
-        video = cv2.VideoWriter(self.getFile(), cv2.VideoWriter_fourcc(*"MJPG"), 30, (px, py))
-        self.tempfile.flush()
+        video = cv2.VideoWriter(self.getFile().name, 828601953, 5, (px, py))
         for i in data:
             video.write(i)
         video.release()
         self.time = timer()-start
 
     def getFile(self):
-        return self.tempfile.name
+        return self.tempfile
 
     def getBytes(self):
-        with open(self.getFile(), "rb") as f:
-            data = f.read()
-            f.close()
-            return data
+        with open(self.getFile().name, "rb") as f:
+            return f.read()
 
     def getBPS(self):
         return len(self.data) / self.time
 
 class dddbDecodeVideo:
-    def __init__(self, data:bytes, px=1920, py=1080, n=5):
+    def __init__(self, data:bytes, px=1920, py=1280, n=10):
         assert isinstance(data, bytes)
         start=timer()
-        self.tempfile = tempfile.NamedTemporaryFile(suffix=".avi", mode="w+b")
+        self.tempfile = tempfile.NamedTemporaryFile(suffix=".mp4", mode="w+b", delete=False)
+        self.tempfile.close()
         by=int(py/n)
         bx=int(px/n)
         bpf=int(by*bx)
-        with open(self.getFile(),"wb") as f:
+        with open(self.getFile().name, "w+b") as f:
             f.write(data)
-        video = cv2.VideoCapture(self.getFile())
+        video = cv2.VideoCapture(self.getFile().name)
         data = []
         ret = True
         while(ret):
@@ -69,14 +68,12 @@ class dddbDecodeVideo:
         video.release()
         data = data[::1,::n,::n,::3]
         data = data.reshape(data.size)
-        end = numpy.where(numpy.logical_and(data > 0x20, data < 0xA0))[0][0]
-        data = data[:end]
         data = numpy.round(data / 0xff, 0)
-        self.data = numpy.packbits(data.astype(numpy.uint8)).tobytes()
+        self.data = numpy.packbits(data.astype(numpy.uint8)).tobytes().rstrip(b'\x00')
         self.time = timer()-start
 
     def getFile(self):
-        return self.tempfile.name
+        return self.tempfile
 
     def getBytes(self):
         return self.data
