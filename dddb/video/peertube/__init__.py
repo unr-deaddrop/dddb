@@ -105,13 +105,13 @@ class dddbPeerTube:
 class TestDddbPeerTube(unittest.TestCase):
     def test_connect(self):
         self.skipTest("a")
-        peerTubeObj = dddbPeerTube("http://192.168.1.166:9000", "deaddrop", "deaddrop")
+        peerTubeObj = dddbPeerTube("http://peertube.localhost:9000", "root", "deaddrop")
         assert peerTubeObj.is_authenticated()
 
     def test_post(self):
         with open(os.path.dirname(os.path.realpath(__file__))+"/../bee-movie.txt","rb") as f:
             string = f.read()
-        dddbPeerTubeObj = dddbPeerTube("http://192.168.1.166:9000", "deaddrop", "deaddrop")
+        dddbPeerTubeObj = dddbPeerTube("http://peertube.localhost:9000", "root", "deaddrop")
         dddbPeerTubeObj.authenticate()
         dddbVideoEncodeObj = dddb.video.dddbEncodeVideo(string)
         assert dddbPeerTubeObj.post(dddbVideoEncodeObj.getBytes(), dest="test2", src="test1")
@@ -122,14 +122,14 @@ class TestDddbPeerTube(unittest.TestCase):
 
     def test_multi_post(self):
         self.skipTest("a")
-        dddbPeerTubeObj = dddbPeerTube("http://192.168.1.166:9000", "deaddrop", "deaddrop")
+        dddbPeerTubeObj = dddbPeerTube("http://peertube.localhost:9000", "root", "deaddrop")
         dddbPeerTubeObj.authenticate()
         dddbVideoEncodeObj = dddb.video.dddbEncodeVideo(b"hello world")
         assert dddbPeerTubeObj.post(dddbVideoEncodeObj.getBytes(), dest="test2", src="test1")
         assert dddbPeerTubeObj.post(dddbVideoEncodeObj.getBytes(), dest="test2", src="test1")
 
     def test_multi_get(self):
-        dddbPeerTubeObj = dddbPeerTube("http://192.168.1.166:9000", "deaddrop", "deaddrop")
+        dddbPeerTubeObj = dddbPeerTube("http://peertube.localhost:9000", "root", "deaddrop")
         dddbPeerTubeObj.authenticate()
         assert dddbPeerTubeObj.is_authenticated()
         for response in dddbPeerTubeObj.get(dest="test2"):
