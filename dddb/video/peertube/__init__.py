@@ -43,25 +43,10 @@ class dddbPeerTube:
         self.configuration.access_token = self.user_token['access_token']
         return True
 
-    def post(self, data:bytes, dest, src, channel_id = 2):
+    def post(self, data:bytes, dest, src, channel_id = 1):
         self.authenticate()
-        avitf = tempfile.NamedTemporaryFile(suffix=".avi", mode="w+b", delete=False)
-        avitf.write(data)
         mp4tf = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
-        c = Converter()
-        info = c.probe(avitf.name)
-        conv = c.convert(avitf.name, mp4tf.name,
-                         {
-                            'format': 'mp4',
-                            'video': {
-                                'codec': 'hevc',
-                                'width': info.video.video_width,
-                                'heigth': info.video.video_height,
-                                'fps': info.video.video_fps
-                            }
-                         })
-        for timecode in conv:
-            print("Convert to mp4")
+        mp4tf.write(data)
         with peertube.ApiClient(self.configuration) as api_client:
             api_instance = peertube.VideoApi(api_client)
             try: 
@@ -72,7 +57,7 @@ class dddbPeerTube:
                 return False
         return True
 
-    def get(self, dest, channel_id=2):
+    def get(self, dest, channel_id=1):
         self.authenticate()
         ret = []
         with peertube.ApiClient(self.configuration) as api_client:
@@ -95,26 +80,7 @@ class dddbPeerTube:
                                     continue
                                 ret.append(meta)
                                 filedownload = requests.get(url)
-                                avitf = tempfile.NamedTemporaryFile(suffix=".avi")
-                                mp4tf = tempfile.NamedTemporaryFile(suffix=".mp4")
-                                mp4tf.write(filedownload.content)
-                                c = Converter()
-                                info = c.probe(mp4tf.name)
-                                conv = c.convert(mp4tf.name, avitf.name,
-                                                 {
-                                                    'format': 'avi',
-                                                    'video': {
-                                                        'codec': 'copy',
-                                                        'width': info.video.video_width,
-                                                        'heigth': info.video.video_height,
-                                                        'fps': info.video.video_fps
-                                                    }
-                                                 })
-                                for timecode in conv:
-                                    print("Converting to avi")
-
-                                ret[-1]['data'] = avitf.read()
-
+                                ret[-1]['data'] = filedownload.content
                                 try:
                                     meta = json.loads(video_data['name'])
                                     meta['read'] = True

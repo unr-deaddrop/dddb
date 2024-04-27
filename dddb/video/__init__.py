@@ -7,10 +7,10 @@ import cv2
 import tempfile
 
 class dddbEncodeVideo:
-    def __init__(self, data:bytes, px=1920, py=1080, n=5):
+    def __init__(self, data:bytes, px=500, py=500, n=5):
         assert isinstance(data, bytes)
         start=timer()
-        self.tempfile = tempfile.NamedTemporaryFile(suffix=".avi", mode="w+b")
+        self.tempfile = tempfile.NamedTemporaryFile(suffix=".mp4", mode="w+b")
         self.data = data + b'\x01';
         by=int(py/n)
         bx=int(px/n)
@@ -29,11 +29,12 @@ class dddbEncodeVideo:
         data.resize(by*bx*fct)
         data = data.reshape(fct,by,bx,1)
         data = data.repeat(n, axis=1).repeat(n, axis=2).repeat(3, axis=3)
-        video = cv2.VideoWriter(self.getFile().name, cv2.VideoWriter_fourcc(*"MJPG"), 30, (px, py))
+        video = cv2.VideoWriter(self.getFile().name, cv2.VideoWriter_fourcc(*"mp4v"), 5, (px, py))
         self.tempfile.flush()
         for i in data:
             video.write(i)
         video.release()
+        input(self.getFile().name)
         self.time = timer()-start
 
     def getFile(self):
@@ -47,16 +48,15 @@ class dddbEncodeVideo:
         return len(self.data) / self.time
 
 class dddbDecodeVideo:
-    def __init__(self, data:bytes, px=1920, py=1080, n=5):
+    def __init__(self, data:bytes, px=500, py=500, n=5):
         assert isinstance(data, bytes)
         start=timer()
-        self.tempfile = tempfile.NamedTemporaryFile(suffix=".avi", mode="w+b", delete=False)
+        self.tempfile = tempfile.NamedTemporaryFile(suffix=".mp4", mode="w+b", delete=False)
         by=int(py/n)
         bx=int(px/n)
         bpf=int(by*bx)
         self.getFile().write(data)
         video = cv2.VideoCapture(self.getFile().name)
-        input(video.isOpened())
         data = []
         ret = True
         while(ret):
@@ -67,8 +67,10 @@ class dddbDecodeVideo:
         video.release()
         data = data[::1,::n,::n,::3]
         data = data.reshape(data.size)
+        end = numpy.where(numpy.logical_and(data > 0x20, data < 0xA0))[0][0]
+-       data = data[:end]
         data = numpy.round(data / 0xff, 0)
-        self.data = numpy.packbits(data.astype(numpy.uint8)).tobytes().rstrip(b'\x00')
+        self.data = numpy.packbits(data.astype(numpy.uint8)).tobytes()
         self.time = timer()-start
 
     def getFile(self):
