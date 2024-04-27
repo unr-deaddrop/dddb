@@ -19,6 +19,13 @@
             buildInputs = (old.buildInputs or [ ]) ++ [ super.flit-core ];
           }
         );
+        opencv-python = super.opencv-python.overridePythonAttrs
+        (
+          old: {
+            enableFfmpeg = true;
+            cmakeFlags = (old.cmakeFlags or [ ]) ++ [ "-DHAVE_FFMPEG=ON" ];
+          }
+        );
         lazy-loader = super.lazy-loader.overridePythonAttrs
         (
           old: {
