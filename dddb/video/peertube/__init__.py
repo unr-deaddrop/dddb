@@ -57,7 +57,7 @@ class dddbPeerTube:
                 return False
         return True
 
-    def get(self, dest, channel_id=1):
+    def get(self, dest=None, channel_id=1, ignore_read=True):
         self.authenticate()
         ret = []
         with peertube.ApiClient(self.configuration) as api_client:
@@ -67,31 +67,43 @@ class dddbPeerTube:
                 for video_data in videos_data['data']:
                     if video_data['channel']['id'] == channel_id:
                         meta = json.loads(video_data['name'])
-                        if meta['dest'] == dest and meta['read'] == False:
+                        
+                        if dest is not None and meta['dest'] != dest:
+                            # If a destination is set and the destination is not
+                            # our own, ignore it.
+                            #
+                            # If a destination is not set, always pass this check.
+                            continue
+                        
+                        if ignore_read and meta['read'] == True:
+                            # If read messages should be ignored and the message
+                            # has already been read, ignore it.
+                            continue
+                        
+                        try:
+                            video = api_instance.videos_id_get(video_data['id'])
+                            video=video.to_dict()
+                            print(video)
+                            if len(video['files']):
+                                url = video['files'][0]['file_download_url'].replace("http://localhost:9000", self.host)
+                            elif len(video['streaming_playlists'][0]):
+                                url = video['streaming_playlists'][0]['files'][0]['file_download_url'].replace("http://localhost:9000", self.host)
+                            else:
+                                continue
+                            ret.append(meta)
+                            filedownload = requests.get(url)
+                            ret[-1]['data'] = filedownload.content
                             try:
-                                video = api_instance.videos_id_get(video_data['id'])
-                                video=video.to_dict()
-                                print(video)
-                                if len(video['files']):
-                                    url = video['files'][0]['file_download_url'].replace("http://localhost:9000", self.host)
-                                elif len(video['streaming_playlists'][0]):
-                                    url = video['streaming_playlists'][0]['files'][0]['file_download_url'].replace("http://localhost:9000", self.host)
-                                else:
-                                    continue
-                                ret.append(meta)
-                                filedownload = requests.get(url)
-                                ret[-1]['data'] = filedownload.content
-                                try:
-                                    meta = json.loads(video_data['name'])
-                                    meta['read'] = True
-                                    api_instance.videos_id_put(video_data['id'], name=json.dumps(meta))
-                                except peertube.ApiException as e:
-                                    print("failed to update video on peertube")
-                                    print(e)
+                                meta = json.loads(video_data['name'])
+                                meta['read'] = True
+                                api_instance.videos_id_put(video_data['id'], name=json.dumps(meta))
                             except peertube.ApiException as e:
-                                print("failed to get videos from peertube")
+                                print("failed to update video on peertube")
                                 print(e)
-                                return ret
+                        except peertube.ApiException as e:
+                            print("failed to get videos from peertube")
+                            print(e)
+                            return ret
 
             except peertube.ApiException as e:
                 print("failed to get videos from peertube")
