@@ -81,8 +81,10 @@ class dddbDecodeVideo:
         video.release()
         data = data[::1,::n,::n,::3]
         data = data.reshape(data.size)
+        end = numpy.where(numpy.logical_and(data > 0x20, data < 0xA0))[0][0]
+        data = data[:end]
         data = numpy.round(data / 0xff, 0)
-        self.data = numpy.packbits(data.astype(numpy.uint8)).tobytes().rstrip(b'\x00')
+        self.data = numpy.packbits(data.astype(numpy.uint8)).tobytes()
         self.time = timer()-start
 
     def getFile(self):
