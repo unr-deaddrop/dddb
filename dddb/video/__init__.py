@@ -1,5 +1,6 @@
 import unittest
 import os
+import sys
 from timeit import default_timer as timer
 from math import ceil
 import numpy
@@ -18,19 +19,31 @@ class dddbEncodeVideo:
         bpf = int(by*bx)
         data = numpy.unpackbits(
                 numpy.frombuffer(self.data, dtype=numpy.uint8)) * 0xFF
-        data[-1] = 0x77;
-        data[-2] = 0x77;
-        data[-3] = 0x77;
-        data[-4] = 0x77;
-        data[-5] = 0x77;
-        data[-6] = 0x77;
-        data[-7] = 0x77;
-        data[-8] = 0x77;
+        data[-1] = 0x80;
+        data[-2] = 0x80;
+        data[-3] = 0x80;
+        data[-4] = 0x80;
+        data[-5] = 0x80;
+        data[-6] = 0x80;
+        data[-7] = 0x80;
+        data[-8] = 0x80;
         fct = int(ceil(len(data)/bpf)+1)
         data.resize(by*bx*fct)
         data = data.reshape(fct,by,bx,1)
         data = data.repeat(n, axis=1).repeat(n, axis=2).repeat(3, axis=3)
-        video = cv2.VideoWriter(self.getFile().name, 828601953, 5, (px, py))
+        
+        if sys.platform == "win32":
+            # On Windows, use the avc1 codec. This was the codec used when
+            # fourcc_codec == -1, and was the only one we found to work on
+            # our installations.
+            fourcc_codec = 0x31637661
+            # fourcc_codec = cv2.VideoWriter_fourcc(*'avc1')
+        else:
+            # By default, use the mp4v codec. This is expected to work in Docker
+            # environments. It *sometimes* works on Linux-wsl, but not reliably.
+            fourcc_codec = cv2.VideoWriter_fourcc(*'mp4v')
+        
+        video = cv2.VideoWriter(self.getFile().name, fourcc_codec, 5, (px, py))
         for i in data:
             video.write(i)
         video.release()
@@ -68,8 +81,10 @@ class dddbDecodeVideo:
         video.release()
         data = data[::1,::n,::n,::3]
         data = data.reshape(data.size)
+        end = numpy.where(numpy.logical_and(data > 0x70, data < 0x90))[0][0]
+        data = data[:end]
         data = numpy.round(data / 0xff, 0)
-        self.data = numpy.packbits(data.astype(numpy.uint8)).tobytes().rstrip(b'\x00')
+        self.data = numpy.packbits(data.astype(numpy.uint8)).tobytes()
         self.time = timer()-start
 
     def getFile(self):

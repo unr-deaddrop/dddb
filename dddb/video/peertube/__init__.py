@@ -1,3 +1,4 @@
+import logging
 import requests
 import unittest
 import sys
@@ -11,6 +12,9 @@ import dddb.video
 import peertube
 from collections import ChainMap
 import tempfile
+
+logger = logging.getLogger(__name__)
+
 class dddbPeerTube:
     def __init__(self, host, username, password):
         self.host = host
@@ -50,52 +54,81 @@ class dddbPeerTube:
         with peertube.ApiClient(self.configuration) as api_client:
             api_instance = peertube.VideoApi(api_client)
             try: 
-                api_response = api_instance.videos_upload_post(mp4tf.name, channel_id, json.dumps({"read": False, "timestamp": time(), "dest": dest, "src": src}), privacy=1)
+                ts = time()
+                api_response = api_instance.videos_upload_post(mp4tf.name, channel_id, name=str(ts), description=json.dumps({"read": False, "timestamp": ts, "dest": dest, "src": src}), privacy=1)
             except peertube.ApiException as e:
-                print("failed to post to peertube")
-                print(e)
+                logger.info("failed to post to peertube")
+                logger.info(e)
                 return False
         return True
 
-    def get(self, dest, channel_id=1):
+    def get(self, dest=None, channel_id=1, ignore_read=True):
         self.authenticate()
         ret = []
         with peertube.ApiClient(self.configuration) as api_client:
             api_instance = peertube.VideoApi(api_client)
             try: 
-                videos_data = api_instance.videos_get().to_dict()
+                videos_data = api_instance.videos_get(count=100).to_dict()
                 for video_data in videos_data['data']:
+
+                    # Delete if older than 10 minutes
+                    if time() > (float(video_data['name']) + (60 * 10)):
+                        try:
+                            logger.info(f"deleting {video_data['name']}")
+                            api_instance.videos_id_delete(video_data['id'])
+                        except peertube.ApiException as e:
+                            logger.error("failed to delete old message from peertube")
+                            logger.error(e)
+                        continue
+
                     if video_data['channel']['id'] == channel_id:
-                        meta = json.loads(video_data['name'])
-                        if meta['dest'] == dest and meta['read'] == False:
+                        try:
+                            meta = json.loads(video_data['description'])
+                        except TypeError:
+                            # This video is missing its metadata. It may be from
+                            # before we started using the description.
+                            continue
+                        
+                        if dest is not None and meta['dest'] != dest:
+                            # If a destination is set and the destination is not
+                            # our own, ignore it.
+                            #
+                            # If a destination is not set, always pass this check.
+                            continue
+                        
+                        if ignore_read and meta['read'] == True:
+                            # If read messages should be ignored and the message
+                            # has already been read, ignore it.
+                            continue
+                        
+                        try:
+                            video = api_instance.videos_id_get(video_data['id'])
+                            video=video.to_dict()
+                            logger.info("video metadata:", video)
+                            if len(video['files']):
+                                url = video['files'][0]['file_download_url'].replace("http://localhost:9000", self.host)
+                            elif len(video['streaming_playlists'][0]):
+                                url = video['streaming_playlists'][0]['files'][0]['file_download_url'].replace("http://localhost:9000", self.host)
+                            else:
+                                continue
+                            ret.append(meta)
+                            filedownload = requests.get(url)
+                            ret[-1]['data'] = filedownload.content
                             try:
-                                video = api_instance.videos_id_get(video_data['id'])
-                                video=video.to_dict()
-                                print(video)
-                                if len(video['files']):
-                                    url = video['files'][0]['file_download_url'].replace("http://localhost:9000", self.host)
-                                elif len(video['streaming_playlists'][0]):
-                                    url = video['streaming_playlists'][0]['files'][0]['file_download_url'].replace("http://localhost:9000", self.host)
-                                else:
-                                    continue
-                                ret.append(meta)
-                                filedownload = requests.get(url)
-                                ret[-1]['data'] = filedownload.content
-                                try:
-                                    meta = json.loads(video_data['name'])
-                                    meta['read'] = True
-                                    api_instance.videos_id_put(video_data['id'], name=json.dumps(meta))
-                                except peertube.ApiException as e:
-                                    print("failed to update video on peertube")
-                                    print(e)
+                                meta = json.loads(video_data['description'])
+                                meta['read'] = True
+                                api_instance.videos_id_put(video_data['id'], description=json.dumps(meta))
                             except peertube.ApiException as e:
-                                print("failed to get videos from peertube")
-                                print(e)
-                                return ret
+                                logger.error("failed to update video on peertube")
+                                logger.error(e)
+                        except peertube.ApiException as e:
+                            logger.error("failed to get videos from peertube")
+                            logger.error(e)
+                            return ret
 
             except peertube.ApiException as e:
-                print("failed to get videos from peertube")
-                print(e)
+                logger.error("failed to get videos from peertube")
+                logger.error(e)
                 return ret
         return ret
 
@@ -105,34 +138,40 @@ class dddbPeerTube:
 class TestDddbPeerTube(unittest.TestCase):
     def test_connect(self):
         self.skipTest("a")
-        peerTubeObj = dddbPeerTube("http://peertube.localhost:9000", "root", "deaddrop")
+        peerTubeObj = dddbPeerTube("http://192.168.0.102:9000", "root", "deaddrop")
         assert peerTubeObj.is_authenticated()
 
     def test_post(self):
         with open(os.path.dirname(os.path.realpath(__file__))+"/../bee-movie.txt","rb") as f:
             string = f.read()
-        dddbPeerTubeObj = dddbPeerTube("http://peertube.localhost:9000", "root", "deaddrop")
+        dddbPeerTubeObj = dddbPeerTube("http://192.168.0.102:9000", "root", "deaddrop")
         dddbPeerTubeObj.authenticate()
         dddbVideoEncodeObj = dddb.video.dddbEncodeVideo(string)
-        assert dddbPeerTubeObj.post(dddbVideoEncodeObj.getBytes(), dest="test2", src="test1")
-        response = dddbPeerTubeObj.get(dest="test2")
+        assert dddbPeerTubeObj.post(dddbVideoEncodeObj.getBytes(), dest="00000000-0000-0000-0000-000000000002", src="00000000-0000-0000-0000-000000000001")
+        response = dddbPeerTubeObj.get(dest="00000000-0000-0000-0000-000000000002")
         dddbVideoDecodeObj = dddb.video.dddbDecodeVideo(response[0]['data'])
-        print("len out:",len(dddbVideoDecodeObj.getBytes()))
+        
+        result = dddbVideoDecodeObj.getBytes()
+        # logger.info(result)
+        
+        print("len out:",len(result))
         print("len in:",len(string))
+        
+        assert result == string
 
     def test_multi_post(self):
         self.skipTest("a")
-        dddbPeerTubeObj = dddbPeerTube("http://peertube.localhost:9000", "root", "deaddrop")
+        dddbPeerTubeObj = dddbPeerTube("http://192.168.0.102:9000", "root", "deaddrop")
         dddbPeerTubeObj.authenticate()
         dddbVideoEncodeObj = dddb.video.dddbEncodeVideo(b"hello world")
         assert dddbPeerTubeObj.post(dddbVideoEncodeObj.getBytes(), dest="test2", src="test1")
         assert dddbPeerTubeObj.post(dddbVideoEncodeObj.getBytes(), dest="test2", src="test1")
 
     def test_multi_get(self):
-        dddbPeerTubeObj = dddbPeerTube("http://peertube.localhost:9000", "root", "deaddrop")
+        dddbPeerTubeObj = dddbPeerTube("http://192.168.0.102:9000", "root", "deaddrop")
         dddbPeerTubeObj.authenticate()
         assert dddbPeerTubeObj.is_authenticated()
-        for response in dddbPeerTubeObj.get(dest="test2"):
+        for response in dddbPeerTubeObj.get(dest="00000000-0000-0000-0000-000000000002"):
             print(dddb.video.dddbDecodeVideo(response['data']).getBytes())
 
 if __name__ == "__main__":
