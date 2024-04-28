@@ -32,14 +32,16 @@ class dddbEncodeVideo:
         data = data.reshape(fct,by,bx,1)
         data = data.repeat(n, axis=1).repeat(n, axis=2).repeat(3, axis=3)
         
-        # By default, use the mp4v codec. This is expected to work in Docker
-        # environments.
-        fourcc_codec = cv2.VideoWriter_fourcc(*'mp4v')
         if sys.platform == "win32":
             # On Windows, use the avc1 codec. This was the codec used when
             # fourcc_codec == -1, and was the only one we found to work on
             # our installations.
             fourcc_codec = 0x31637661
+            # fourcc_codec = cv2.VideoWriter_fourcc(*'avc1')
+        else:
+            # By default, use the mp4v codec. This is expected to work in Docker
+            # environments.
+            fourcc_codec = cv2.VideoWriter_fourcc(*'mp4v')
         
         video = cv2.VideoWriter(self.getFile().name, fourcc_codec, 5, (px, py))
         for i in data:

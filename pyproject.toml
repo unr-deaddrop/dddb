@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dddb"
-version = "0.4.0"
+version = "0.5.0"
 description = "DeadDrop protocol library"
 authors = ["Your Name <you@example.com>"]
 license = "MIT"
