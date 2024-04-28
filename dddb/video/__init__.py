@@ -1,5 +1,6 @@
 import unittest
 import os
+import sys
 from timeit import default_timer as timer
 from math import ceil
 import numpy
@@ -30,7 +31,17 @@ class dddbEncodeVideo:
         data.resize(by*bx*fct)
         data = data.reshape(fct,by,bx,1)
         data = data.repeat(n, axis=1).repeat(n, axis=2).repeat(3, axis=3)
-        video = cv2.VideoWriter(self.getFile().name, 828601953, 5, (px, py))
+        
+        # By default, use the mp4v codec. This is expected to work in Docker
+        # environments.
+        fourcc_codec = cv2.VideoWriter_fourcc(*'mp4v')
+        if sys.platform == "win32":
+            # On Windows, use the avc1 codec. This was the codec used when
+            # fourcc_codec == -1, and was the only one we found to work on
+            # our installations.
+            fourcc_codec = 0x31637661
+        
+        video = cv2.VideoWriter(self.getFile().name, fourcc_codec, 5, (px, py))
         for i in data:
             video.write(i)
         video.release()
