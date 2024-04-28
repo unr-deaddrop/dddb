@@ -11,6 +11,7 @@ import dddb.video
 import peertube
 from collections import ChainMap
 import tempfile
+import time
 class dddbPeerTube:
     def __init__(self, host, username, password):
         self.host = host
@@ -64,8 +65,18 @@ class dddbPeerTube:
         with peertube.ApiClient(self.configuration) as api_client:
             api_instance = peertube.VideoApi(api_client)
             try: 
-                videos_data = api_instance.videos_get().to_dict()
+                videos_data = api_instance.videos_get(count=100).to_dict()
                 for video_data in videos_data['data']:
+
+                    # Delete if older than 10 minutes
+                    if time.time() > (float(video_data['name']) + (60 * 10)):
+                        try:
+                            api_instance.videos_id_delete(video_data['id'])
+                        except peertube.ApiException as e:
+                            print("failed to delete old message from peertube")
+                            print(e)
+                        continue
+
                     if video_data['channel']['id'] == channel_id:
                         try:
                             meta = json.loads(video_data['description'])
