@@ -19,14 +19,14 @@ class dddbEncodeVideo:
         bpf = int(by*bx)
         data = numpy.unpackbits(
                 numpy.frombuffer(self.data, dtype=numpy.uint8)) * 0xFF
-        data[-1] = 0x77;
-        data[-2] = 0x77;
-        data[-3] = 0x77;
-        data[-4] = 0x77;
-        data[-5] = 0x77;
-        data[-6] = 0x77;
-        data[-7] = 0x77;
-        data[-8] = 0x77;
+        data[-1] = 0x80;
+        data[-2] = 0x80;
+        data[-3] = 0x80;
+        data[-4] = 0x80;
+        data[-5] = 0x80;
+        data[-6] = 0x80;
+        data[-7] = 0x80;
+        data[-8] = 0x80;
         fct = int(ceil(len(data)/bpf)+1)
         data.resize(by*bx*fct)
         data = data.reshape(fct,by,bx,1)
@@ -81,7 +81,7 @@ class dddbDecodeVideo:
         video.release()
         data = data[::1,::n,::n,::3]
         data = data.reshape(data.size)
-        end = numpy.where(numpy.logical_and(data > 0x20, data < 0xA0))[0][0]
+        end = numpy.where(numpy.logical_and(data > 0x70, data < 0x90))[0][0]
         data = data[:end]
         data = numpy.round(data / 0xff, 0)
         self.data = numpy.packbits(data.astype(numpy.uint8)).tobytes()
