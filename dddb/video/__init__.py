@@ -40,7 +40,7 @@ class dddbEncodeVideo:
             # fourcc_codec = cv2.VideoWriter_fourcc(*'avc1')
         else:
             # By default, use the mp4v codec. This is expected to work in Docker
-            # environments.
+            # environments. It *sometimes* works on Linux-wsl, but not reliably.
             fourcc_codec = cv2.VideoWriter_fourcc(*'mp4v')
         
         video = cv2.VideoWriter(self.getFile().name, fourcc_codec, 5, (px, py))
